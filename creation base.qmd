@@ -1,0 +1,829 @@
+---
+title: "Création base"
+format: html
+editor: visual
+---
+
+# Packages
+
+```{r}
+library(readxl)
+library(writexl)
+library(tibble)
+library(tidyr)
+library(dplyr)
+```
+
+# Vecteurs
+
+```{r}
+noms_colonnes_base <- c("Pays", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan-Dec")
+
+noms_colonnes_base_avion <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan-Dec")
+```
+
+# Import des bases
+
+On prend les bases de l'année N-1 afin de garder les données corrigées.
+
+## 2013
+
+```{r}
+# décembre 2014 nous donne les données de décembre 2013
+
+dec2013 <- read_excel("E:/M1/Mémoire/Données/Tourisme/toudec14.xls", 
+    sheet = "Jan-Dec 13-14", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2013 <- dec2013[-c(1:3, 16, 23, 33:35, 46, 50, 56, 59:62), ]
+dec2013 <- dec2013[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+# dec2013 <- column_to_rownames(dec2013, var = colnames(dec2013)[1])
+colnames(dec2013) <- as.character(noms_colonnes_base)
+
+View(dec2013)
+```
+
+## 2014
+
+```{r}
+# décembre 2015 nous donne les données de décembre 2014
+dec2014 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec15.xls", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2014 <- dec2014[-c(1:5, 42, 73, 96:99), ]
+dec2014 <- dec2014[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+# dec2014 <- column_to_rownames(dec2014, var = colnames(dec2014)[1])
+colnames(dec2014) <- as.character(noms_colonnes_base)
+
+View(dec2014)
+```
+
+```{r}
+avion2014 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec15.xls", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2014 <- avion2014[-c(1:8, 10:24), ]
+avion2014 <- avion2014[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2014 <- column_to_rownames(avion2014, var = colnames(avion2014)[1])
+colnames(avion2014) <- as.character(noms_colonnes_base_avion)
+
+View(avion2014)
+```
+
+## 2015
+
+```{r}
+# décembre 2016 nous donne les données de décembre 2015
+dec2015 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec16.XLS", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2015 <- dec2015[-c(1:5, 38, 47, 106, 129:134), ]
+dec2015 <- dec2015[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+# dec2015 <- column_to_rownames(dec2015, var = colnames(dec2015)[1])
+colnames(dec2015) <- as.character(noms_colonnes_base)
+
+View(dec2015)
+
+```
+
+```{r}
+avion2015 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec16.XLS", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2015 <- avion2015[-c(1:8, 10:25), ]
+avion2015 <- avion2015[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2015 <- column_to_rownames(avion2015, var = colnames(avion2015)[1])
+colnames(avion2015) <- as.character(noms_colonnes_base_avion)
+
+View(avion2015)
+```
+
+## 2016
+
+```{r}
+# décembre 2017 nous donne les données de décembre 2016
+dec2016 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec17.xls", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2016 <- dec2016[-c(1:5, 38, 47, 106, 129:133), ]
+dec2016 <- dec2016[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+# dec2016 <- column_to_rownames(dec2016, var = colnames(dec2016)[1])
+colnames(dec2016) <- as.character(noms_colonnes_base)
+
+View(dec2016)
+```
+
+```{r}
+avion2016 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec17.xls", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2016 <- avion2016[-c(1:8, 10:24), ]
+avion2016 <- avion2016[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2016 <- column_to_rownames(avion2016, var = colnames(avion2016)[1])
+colnames(avion2016) <- as.character(noms_colonnes_base_avion)
+
+View(avion2016)
+```
+
+## 2017
+
+```{r}
+# décembre 2018 nous donne les données de décembre 2017
+dec2017 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec18.xls", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2017 <- dec2017[-c(1:5, 38, 47, 106, 129:134), ]
+dec2017 <- dec2017[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+# dec2017 <- column_to_rownames(dec2017, var = colnames(dec2017)[1])
+colnames(dec2017) <- as.character(noms_colonnes_base)
+
+View(dec2017)
+```
+
+```{r}
+avion2017 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec18.xls", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2017 <- avion2017[-c(1:8, 10:24), ]
+avion2017 <- avion2017[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2017 <- column_to_rownames(avion2017, var = colnames(avion2017)[1])
+colnames(avion2017) <- as.character(noms_colonnes_base_avion)
+
+View(avion2017)
+```
+
+## 2018
+
+```{r}
+# décembre 2019 nous donne les données de décembre 2018
+dec2018 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec19.xls", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2018 <- dec2018[-c(1:6, 39, 48, 107, 130:135), ]
+dec2018 <- dec2018[, -c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33,35,36,38,39, 41:85)]
+
+# renommer les lignes et les colonnes
+# dec2018 <- column_to_rownames(dec2018, var = colnames(dec2018)[1])
+colnames(dec2018) <- as.character(noms_colonnes_base)
+
+View(dec2018)
+```
+
+```{r}
+avion2018 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec19.xls", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2018 <- avion2018[-c(1:8, 10:24), ]
+avion2018 <- avion2018[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2018 <- column_to_rownames(avion2018, var = colnames(avion2018)[1])
+colnames(avion2018) <- as.character(noms_colonnes_base_avion)
+
+View(avion2018)
+```
+
+## 2019
+
+```{r}
+# décembre 2020 nous donne les données de décembre 2019
+
+dec2019 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec20.xls", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2019 <- dec2019[-c(1:6, 39, 48, 107, 130:135), ]
+dec2019 <- dec2019[, -c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33,35,36,38,39, 41:85)]
+
+# renommer les lignes et les colonnes
+# dec2019 <- column_to_rownames(dec2019, var = colnames(dec2019)[1])
+colnames(dec2019) <- as.character(noms_colonnes_base)
+
+View(dec2019)
+```
+
+```{r}
+avion2019 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec20.xls", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2019 <- avion2019[-c(1:8, 10:24), ]
+avion2019 <- avion2019[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2019 <- column_to_rownames(avion2019, var = colnames(avion2019)[1])
+colnames(avion2019) <- as.character(noms_colonnes_base_avion)
+
+View(avion2019)
+```
+
+## 2020
+
+```{r}
+# décembre 2021 nous donne les données de décembre 2020
+
+dec2020 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec21_110122.xlsx", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2020 <- dec2020[-c(1:6, 39, 48, 107, 130:135), ]
+dec2020 <- dec2020[, -c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33,35,36,38,39, 41:85)]
+
+# renommer les lignes et les colonnes
+# dec2020 <- column_to_rownames(dec2020, var = colnames(dec2020)[1])
+colnames(dec2020) <- as.character(noms_colonnes_base)
+
+View(dec2020)
+```
+
+```{r}
+avion2020 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec21_110122.xlsx", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2020 <- avion2020[-c(1:7, 9:19), ]
+avion2020 <- avion2020[, -c(15:29)]
+
+# renommer les lignes et les colonnes
+avion2020 <- column_to_rownames(avion2020, var = colnames(avion2020)[1])
+colnames(avion2020) <- as.character(noms_colonnes_base_avion)
+
+View(avion2020)
+```
+
+## 2021
+
+```{r}
+# décembre 2022 nous donne les données de décembre 2021
+
+dec2021 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec 2022_110123.xlsx", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2021 <- dec2021[-c(1:6, 39, 48, 107, 130:135), ]
+dec2021 <- dec2021[, -c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33,35,36,38,39, 41:79)]
+
+# renommer les lignes et les colonnes
+# dec2021 <- column_to_rownames(dec2021, var = colnames(dec2021)[1])
+colnames(dec2021) <- as.character(noms_colonnes_base)
+
+View(dec2021)
+```
+
+```{r}
+avion2021 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec 2022_110123.xlsx", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2021 <- avion2021[-c(1:7, 9:19), ]
+avion2021 <- avion2021[, -c(15:27)]
+
+# renommer les lignes et les colonnes
+avion2021 <- column_to_rownames(avion2021, var = colnames(avion2021)[1])
+colnames(avion2021) <- as.character(noms_colonnes_base_avion)
+
+View(avion2021)
+```
+
+## 2022
+
+```{r}
+# décembre 2023 nous donne les données de décembre 2022
+
+dec2022 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec23_160224.xlsx", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2022 <- dec2022[-c(1:6, 39, 48, 107, 130:135), ]
+dec2022 <- dec2022[, -c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33,35,36,38,39, 41:79)]
+
+# renommer les lignes et les colonnes
+# dec2022 <- column_to_rownames(dec2022, var = colnames(dec2022)[1])
+colnames(dec2022) <- as.character(noms_colonnes_base)
+
+View(dec2022)
+```
+
+```{r}
+avion2022 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec23_160224.xlsx", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2022 <- avion2022[-c(1:7, 9:18), ]
+avion2022 <- avion2022[, -c(15:27)]
+
+# renommer les lignes et les colonnes
+avion2022 <- column_to_rownames(avion2022, var = colnames(avion2022)[1])
+colnames(avion2022) <- as.character(noms_colonnes_base_avion)
+
+View(avion2022)
+```
+
+## 2023
+
+```{r}
+# décembre 2024 nous donne les données de décembre 2023
+
+dec2023 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec24_130125.xlsx", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2023 <- dec2023[-c(1:6, 39, 48, 107, 130:135), ]
+dec2023 <- dec2023[, -c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24,26,27,29,30,32,33,35,36,38,39, 41:79)]
+
+# renommer les lignes et les colonnes
+# dec2023 <- column_to_rownames(dec2023, var = colnames(dec2023)[1])
+colnames(dec2023) <- as.character(noms_colonnes_base)
+
+View(dec2023)
+```
+
+```{r}
+avion2023 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec24_130125.xlsx", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2023 <- avion2023[-c(1:7, 9:19), ]
+avion2023 <- avion2023[, -c(15:27)]
+
+# renommer les lignes et les colonnes
+avion2023 <- column_to_rownames(avion2023, var = colnames(avion2023)[1])
+colnames(avion2023) <- as.character(noms_colonnes_base_avion)
+
+View(avion2023)
+```
+
+## 2024
+
+Données non corrigées.
+
+```{r}
+dec2024 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec24_130125.xlsx", 
+    sheet = "Table 2", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+dec2024 <- dec2024[-c(1:6, 39, 48, 107, 130:135), ]
+dec2024 <- dec2024[, -c(2:42,44,45,47,48,50,51,53,54,56,57,59,60,62,63,65,66,68,69,71,72,74,75,77,78)]
+
+# renommer les lignes et les colonnes
+# dec2024 <- column_to_rownames(dec2024, var = colnames(dec2024)[1])
+colnames(dec2024) <- as.character(noms_colonnes_base)
+
+View(dec2024)
+```
+
+```{r}
+avion2024 <- read_excel("E:/M1/Mémoire/Données/Tourisme/Tourist_M_Dec24_130125.xlsx", 
+    sheet = "Table 1", col_names = FALSE)
+
+# enlever les lignes et colonnes inutiles
+avion2024 <- avion2024[-c(1:7, 9:19), ]
+avion2024 <- avion2024[, -c(2:14)]
+
+# renommer les lignes et les colonnes
+avion2024 <- column_to_rownames(avion2024, var = colnames(avion2024)[1])
+colnames(avion2024) <- as.character(noms_colonnes_base_avion)
+
+View(avion2024)
+```
+
+# Format large
+
+## Ajout d'une colonne avec l'année dans chaque table
+
+### 2013
+
+```{r}
+dec2013$Annee <- 2013
+```
+
+### 2014
+
+```{r}
+dec2014$Annee <- 2014
+avion2014$Annee <- 2014
+```
+
+### 2015
+
+```{r}
+dec2015$Annee <- 2015
+avion2015$Annee <- 2015
+```
+
+### 2016
+
+```{r}
+dec2016$Annee <- 2016
+avion2016$Annee <- 2016
+```
+
+### 2017
+
+```{r}
+dec2017$Annee <- 2017
+avion2017$Annee <- 2017
+```
+
+### 2018
+
+```{r}
+dec2018$Annee <- 2018
+avion2018$Annee <- 2018
+```
+
+### 2019
+
+```{r}
+dec2019$Annee <- 2019
+avion2019$Annee <- 2019
+```
+
+### 2020
+
+```{r}
+dec2020$Annee <- 2020
+avion2020$Annee <- 2020
+```
+
+### 2021
+
+```{r}
+dec2021$Annee <- 2021
+avion2021$Annee <- 2021
+```
+
+### 2022
+
+```{r}
+dec2022$Annee <- 2022
+avion2022$Annee <- 2022
+```
+
+### 2023
+
+```{r}
+dec2023$Annee <- 2023
+avion2023$Annee <- 2023
+```
+
+### 2024
+
+```{r}
+dec2024$Annee <- 2024
+avion2024$Annee <- 2024
+```
+
+## Transformer les mois en ligne
+
+### 2013
+
+```{r}
+dec2013_long <- dec2013 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2014
+
+```{r}
+dec2014_long <- dec2014 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2014_long <- avion2014 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2015
+
+```{r}
+dec2015_long <- dec2015 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2015_long <- avion2015 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2016
+
+```{r}
+dec2016_long <- dec2016 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2016_long <- avion2016 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2017
+
+```{r}
+dec2017_long <- dec2017 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2017_long <- avion2017 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2018
+
+```{r}
+dec2018_long <- dec2018 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2018_long <- avion2018 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2019
+
+```{r}
+dec2019_long <- dec2019 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2019_long <- avion2019 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2020
+
+```{r}
+dec2020_long <- dec2020 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2020_long <- avion2020 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2021
+
+```{r}
+dec2021_long <- dec2021 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2021_long <- avion2021 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2022
+
+```{r}
+dec2022_long <- dec2022 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2022_long <- avion2022 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2023
+
+```{r}
+dec2023_long <- dec2023 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2023_long <- avion2023 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+### 2024
+
+```{r}
+dec2024_long <- dec2024 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+```{r}
+avion2024_long <- avion2024 |>
+  pivot_longer(
+    cols = Jan:`Jan-Dec`,
+    names_to = "Mois",
+    values_to = "Nb touristes"
+  )
+```
+
+# Fusinonner les bases
+
+## Base tourisme
+
+```{r}
+base_tourisme <- bind_rows(
+  dec2013_long,
+  dec2014_long,
+  dec2015_long,
+  dec2016_long,
+  dec2017_long,
+  dec2018_long,
+  dec2019_long,
+  dec2020_long,
+  dec2021_long,
+  dec2022_long,
+  dec2023_long,
+  dec2024_long
+)
+```
+
+```{r}
+# renommer Nb touristes en Nb_tourites
+names(base_tourisme)[names(base_tourisme) == "Nb touristes"] <- "Nb_touristes"
+```
+
+```{r}
+# changer la nature des variables
+base_tourisme$Annee <- as.factor(base_tourisme$Annee)
+base_tourisme$Mois_num <- match(base_tourisme$Mois, month.abb)
+base_tourisme$Nb_touristes <- as.numeric(base_tourisme$Nb_touristes)
+base_tourisme$Mois <- as.factor(base_tourisme$Mois)
+
+```
+
+```{r}
+str(base_tourisme)
+```
+
+```{r}
+base_tourisme <- na.omit(base_tourisme)
+```
+
+```{r}
+# sauvegarde
+write_xlsx(base_tourisme, "E:/M1/Mémoire/Données/base_tourisme.xlsx")
+```
+
+## Base avion
+
+```{r}
+base_avion <- bind_rows(
+  avion2014_long,
+  avion2015_long,
+  avion2016_long,
+  avion2017_long,
+  avion2018_long,
+  avion2019_long,
+  avion2020_long,
+  avion2021_long,
+  avion2022_long,
+  avion2023_long,
+  avion2024_long
+  
+)
+```
+
+```{r}
+# renommer Nb touristes en Nb_tourites
+names(base_avion)[names(base_avion) == "Nb touristes"] <- "Nb_touristes"
+```
+
+```{r}
+str(base_avion)
+```
+
+```{r}
+# changer la nature des variables
+base_avion$Annee <- as.factor(base_avion$Annee)
+base_avion$Mois_num <- match(base_avion$Mois, month.abb)
+base_avion$Nb_touristes <- as.numeric(base_avion$Nb_touristes)
+base_avion$Mois <- as.factor(base_avion$Mois)
+```
+
+```{r}
+base_avion <- na.omit(base_avion)
+```
+
+```{r}
+# sauvegarde
+write_xlsx(base_avion, "E:/M1/Mémoire/Données/base_avion.xlsx")
+```

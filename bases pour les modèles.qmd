@@ -1,0 +1,682 @@
+---
+title: "Construction des bases pour les modèles"
+format: html
+editor: visual
+---
+
+# Import des packages
+
+```{r}
+library(readr)
+library(dplyr)
+library(fastDummies)
+library(lubridate)
+library(gets)
+library(lmtest)
+library(sandwich)
+library(car)
+library(forecats)
+library(mice)
+library(leaps)
+```
+
+# Import des bases
+
+```{r}
+modele_continents <- read_csv("E:/M1/Mémoire/Données/modele_continents.csv")
+View(modele_continents)
+```
+
+```{r}
+modele_simple <- read_csv("E:/M1/Mémoire/Données/modele_simple.csv")
+View(modele_simple)
+```
+
+```{r}
+meteo_jours <- read_csv("E:/M1/Mémoire/Données/meteo_par_jour.csv")
+View(meteo_jours)
+```
+
+# Ajout des dummies "mois"
+
+## Dans modele_simple
+
+```{r}
+
+modele_simple <- modele_simple %>%
+  mutate(
+    Annee = year(Date),
+    Mois_num = month(Date)
+)
+```
+
+```{r}
+modele_simple <- modele_simple |>
+  mutate(
+    janvier = ifelse(Mois_num == 1, 1, 0),
+    fevrier = ifelse(Mois_num == 2, 1, 0),
+    mars = ifelse(Mois_num == 3, 1, 0),
+    avril = ifelse(Mois_num == 4, 1, 0),
+    mai = ifelse(Mois_num == 5, 1, 0),
+    juin = ifelse(Mois_num == 6, 1, 0),
+    juillet = ifelse(Mois_num == 7, 1, 0),
+    aout = ifelse(Mois_num == 8, 1, 0),
+    septembre = ifelse(Mois_num == 9, 1, 0),
+    octobre = ifelse(Mois_num == 10, 1, 0),
+    novembre = ifelse(Mois_num == 11, 1, 0),
+    decembre = ifelse(Mois_num == 12, 1, 0)
+  )
+```
+
+## Dans modele_continents
+
+```{r}
+modele_continents <- modele_continents %>%
+  mutate(
+    Annee = year(Date),
+    Mois_num = month(Date)
+)
+```
+
+```{r}
+modele_continents <- modele_continents |>
+  mutate(
+    janvier = ifelse(Mois_num == 1, 1, 0),
+    fevrier = ifelse(Mois_num == 2, 1, 0),
+    mars = ifelse(Mois_num == 3, 1, 0),
+    avril = ifelse(Mois_num == 4, 1, 0),
+    mai = ifelse(Mois_num == 5, 1, 0),
+    juin = ifelse(Mois_num == 6, 1, 0),
+    juillet = ifelse(Mois_num == 7, 1, 0),
+    aout = ifelse(Mois_num == 8, 1, 0),
+    septembre = ifelse(Mois_num == 9, 1, 0),
+    octobre = ifelse(Mois_num == 10, 1, 0),
+    novembre = ifelse(Mois_num == 11, 1, 0),
+    decembre = ifelse(Mois_num == 12, 1, 0)
+  )
+```
+
+## saisonnalité
+
+```{r}
+ts_tourisme <- ts(
+     modele_simple$Nb_touristes,
+     start = c(min(modele_simple$Annee), 1),
+     frequency = 12
+ )
+```
+
+```{r}
+summary(seastests::combined_test(ts_tourisme))
+```
+
+```{r}
+mod_dummies <- lm(ts_tourisme ~ seasonaldummy(ts_tourisme))
+summary(mod_dummies)
+```
+
+Saisonnalité ok.
+
+## Choix du mois de ref
+
+```{r}
+ modele_continents %>%
+     group_by(Mois) %>%
+     summarise(
+         moyenne = mean(Nb_touristes, na.rm = TRUE),
+         sd = sd(Nb_touristes, na.rm = TRUE)
+     )
+```
+
+On prend le mois de mai comme ref
+
+## Nettoyage
+
+### modele_simple
+
+```{r}
+str(modele_simple)
+```
+
+```{r}
+modele_simple <- modele_simple[, -1]
+```
+
+```{r}
+# enlever la colonne "mai" car mois de ref
+modele_simple <- modele_simple %>%
+  select(-mai)
+```
+
+### modele_continents
+
+```{r}
+str(modele_continents)
+```
+
+```{r}
+modele_continents <- modele_continents[,-c(1,2)]
+```
+
+```{r}
+# enlever la colonne "mai" car mois de ref
+modele_continents <- modele_continents %>%
+  select(-mai)
+```
+
+# Ajout des precipitations et température
+
+```{r}
+str(meteo_jours)
+```
+
+```{r}
+meteo_jours_clean <- meteo_jours %>%
+  mutate(
+    Annee = lubridate::year(DATE),
+    Mois_num = lubridate::month(DATE)
+  ) %>%
+  filter(Annee >= 2013, Annee <= 2024)
+```
+
+```{r}
+temp_mensuelle <- meteo_jours_clean %>%
+  group_by(Annee, Mois_num) %>%
+  summarise(
+    temperature_moyenne = mean(TAVG, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+precip_mensuelle <- meteo_jours_clean %>%
+  group_by(Annee, Mois_num) %>%
+  summarise(
+    precipitation_mensuelle = sum(PRCP, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+précipitations en mm température en degré celcius
+
+```{r}
+meteo_mensuelle <- temp_mensuelle %>%
+  left_join(precip_mensuelle, by = c("Annee", "Mois_num"))
+```
+
+# Anomalies
+
+## Température
+
+```{r}
+temp_ref <- meteo_mensuelle %>%
+  group_by(Mois_num) %>%
+  summarise(
+    temp_ref = mean(temperature_moyenne, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+meteo_mensuelle <- meteo_mensuelle %>%
+  left_join(temp_ref, by = "Mois_num") %>%
+  mutate(
+    anomalie_temperature = pmax(
+      0,
+      temperature_moyenne - temp_ref
+    )
+  )
+```
+
+## Précipitations
+
+```{r}
+precip_ref <- meteo_mensuelle %>%
+  group_by(Mois_num) %>%
+  summarise(
+    precip_ref = mean(precipitation_mensuelle, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+meteo_mensuelle <- meteo_mensuelle %>%
+  left_join(precip_ref, by = "Mois_num") %>%
+  mutate(
+    anomalie_precipitation = pmax(
+      0,
+      precipitation_mensuelle - precip_ref
+    )
+  )
+```
+
+# Ajout dans les deux bases de données
+
+## Dans modele_continents
+
+```{r}
+modele_continents <- modele_continents %>%
+  left_join(
+    meteo_mensuelle,
+    by = c("Annee", "Mois_num")
+  )
+```
+
+## Dans modele_simple
+
+```{r}
+modele_simple <- modele_simple %>%
+  left_join(
+    meteo_mensuelle,
+    by = c("Annee", "Mois_num")
+  )
+```
+
+# Sauvegarde des bases
+
+```{r}
+write.csv(modele_continents,"E:/M1/Mémoire/Données/modele_continents_complet.csv" )
+```
+
+```{r}
+write.csv(modele_simple,"E:/M1/Mémoire/Données/modele_simple_complet.csv" )
+```
+
+####################################################################################################################################################################################################################################################################################################################################### 
+
+## Ajout dans base_finale
+
+```{r}
+base_finale <- base_finale %>%
+  left_join(
+    meteo_moy_mensuelle %>%
+      select(
+        Date,
+        temperature_moyenne = temp_moy_mois,
+        precipitation = prcp_moy_mois
+      ),
+    by = "Date"
+  )
+```
+
+```{r}
+str(base_finale)
+```
+
+## Température anomalie
+
+```{r}
+
+temp_ref <- base_finale %>%
+  group_by(Mois) %>%
+  summarise(
+    temp_reference = mean(temperature_moyenne, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+base_finale <- base_finale %>%
+  left_join(temp_ref, by = "Mois") %>%
+  mutate(
+    temperature_anomalie = temperature_moyenne - temp_reference
+  )
+
+```
+
+# Amélioration de base_finale
+
+```{r}
+#base_finale <- base_finale %>%
+  #select(-Mois)
+```
+
+```{r}
+base_finale <- base_finale[, -1]
+```
+
+```{r}
+#base_finale$Pays <- factor(base_finale$Pays)
+```
+
+```{r}
+#base_finale$evenement_meteo <- as.numeric(base_finale$evenement_meteo)
+#base_finale$covid <- as.numeric(base_finale$covid)
+```
+
+```{r}
+#base_finale[, 8:19] <- lapply(base_finale[, 8:19], as.numeric)
+```
+
+```{r}
+base_finale <- base_finale[
+  , !(names(base_finale) %in% c(
+    "Mois_Jan", "Mois_Feb", "Mois_Mar", "Mois_Apr",
+    "Mois_May", "Mois_Jun", "Mois_Jul", "Mois_Aug",
+    "Mois_Sep", "Mois_Oct", "Mois_Nov", "Mois_Dec"
+  ))
+]
+```
+
+```{r}
+names(base_finale)[names(base_finale) == "Pays"] <- "Continent"
+```
+
+```{r}
+summary(base_finale)
+```
+
+# Traitement des données manquantes
+
+```{r}
+set.seed(3)
+base_finale_impute <- mice(base_finale)
+base_finale_impute$method
+```
+
+```{r}
+base_finale_complete <- complete(base_finale_impute, 1) 
+```
+
+# Sauvegarde en csv
+
+```{r}
+write.csv(base_finale, "E:/M1/Mémoire/Données/base_finale.csv")
+
+```
+
+```{r}
+write.csv(base_finale_complete, "E:/M1/Mémoire/Données/base_finale_complete.csv")
+```
+
+# Modèle avec GETS
+
+```{r}
+gum <- lm(
+  Nb_touristes ~
+    temperature_anomalie +
+    precipitation +
+    evenement_meteo +
+    covid +
+    Continent +
+    Mois_num ,
+    #Mois_Feb + Mois_Mar + Mois_Apr + Mois_May +
+    #Mois_Jun + Mois_Jul + Mois_Aug + Mois_Sep +
+    #Mois_Oct + Mois_Nov + Mois_Dec,
+  data = base_finale_complete
+)
+```
+
+```{r}
+modele_gets <- gets(
+  gum,        
+  #keep = c("covid" 
+           #"Mois_Feb", "Mois_Mar", "Mois_Apr", "Mois_May", "Mois_Jun", "Mois_Jul", "Mois_Aug", "Mois_Sep", "Mois_Oct", "Mois_Nov", "Mois_Dec"
+          # ),  
+  t.pval = 0.05
+)
+```
+
+```{r}
+final_model <- coef(modele_gets)
+```
+
+```{r}
+bgtest(modele_gets, order = 12)
+```
+
+```{r}
+nw_results <- coeftest(
+  modele_gets,
+  vcov = NeweyWest(modele_gets, lag = 12, prewhite = FALSE)
+)
+
+nw_results
+```
+
+```{r}
+modele_sans <- lm(
+  Nb_touristes ~
+    temperature_anomalie +
+    covid +
+    Mois_num +
+    Continent,
+    #Mois_Feb + Mois_Mar + Mois_Apr + Mois_May +
+    #Mois_Jun + Mois_Jul + Mois_Aug + Mois_Sep +
+    #Mois_Oct + Mois_Nov + Mois_Dec,
+  data = base_finale_complete
+)
+
+
+coeftest(
+  modele_sans,
+  vcov = NeweyWest(modele_sans, lag = 12, prewhite = FALSE)
+)
+
+```
+
+```{r}
+modele_avec <- lm(
+  Nb_touristes ~
+    temperature_anomalie +
+    evenement_meteo +
+    covid +
+    Mois_num +
+    Continent,
+    #Mois_Feb + Mois_Mar + Mois_Apr + Mois_May +
+    #Mois_Jun + Mois_Jul + Mois_Aug + Mois_Sep +
+    #Mois_Oct + Mois_Nov + Mois_Dec,
+  data = base_finale_complete
+)
+
+
+coeftest(
+  modele_avec,
+  vcov = NeweyWest(modele_avec, lag = 12, prewhite = FALSE)
+)
+
+```
+
+```{r}
+AIC(modele_sans, modele_avec)
+```
+
+```{r}
+vif(modele_avec)
+```
+
+# Modèle par provenance
+
+## Europe
+
+```{r}
+modele_europe <- lm(
+  Nb_touristes ~
+    temperature_moyenne +
+    precipitation +
+    evenement_meteo +
+    covid +
+    Mois_num,
+  data = subset(base_finale, Continent == "EUROPE")
+)
+
+coeftest(
+  modele_europe,
+  vcov = NeweyWest(modele_europe, lag = 12)
+)
+```
+
+## Asie
+
+```{r}
+modele_europe <- lm(
+  Nb_touristes ~
+    temperature_moyenne +
+    precipitation +
+    evenement_meteo +
+    covid +
+    Mois_num,
+  data = subset(base_finale, Continent == "ASIA")
+)
+
+coeftest(
+  modele_europe,
+  vcov = NeweyWest(modele_europe, lag = 12)
+)
+```
+
+## Afrique
+
+```{r}
+modele_europe <- lm(
+  Nb_touristes ~
+    temperature_moyenne +
+    precipitation +
+    evenement_meteo +
+    covid +
+    Mois_num,
+  data = subset(base_finale, Continent == "AFRICA")
+)
+
+coeftest(
+  modele_europe,
+  vcov = NeweyWest(modele_europe, lag = 12)
+)
+```
+
+## Amérique
+
+```{r}
+modele_europe <- lm(
+  Nb_touristes ~
+    temperature_moyenne +
+    precipitation +
+    evenement_meteo +
+    covid +
+    Mois_num,
+  data = subset(base_finale, Continent == "AMERICA")
+)
+
+coeftest(
+  modele_europe,
+  vcov = NeweyWest(modele_europe, lag = 12)
+)
+```
+
+## Océanie
+
+```{r}
+modele_europe <- lm(
+  Nb_touristes ~
+    temperature_moyenne +
+    precipitation +
+    evenement_meteo +
+    covid +
+    Mois_num,
+  data = subset(base_finale, Continent == "OCEANIA")
+)
+
+coeftest(
+  modele_europe,
+  vcov = NeweyWest(modele_europe, lag = 12)
+)
+```
+
+# Modèle avec library(leaps)
+
+```{r}
+library(leaps)
+
+leaps_model <- regsubsets(
+  Nb_touristes ~
+    temperature_anomalie +
+    precipitation +
+    evenement_meteo +
+    covid,
+  data = base_finale,
+  nbest = 1,
+  method = "exhaustive"
+)
+
+summary(leaps_model)
+```
+
+```{r}
+res_sum <- summary(leaps_model)
+
+which.max(res_sum$adjr2)
+which.min(res_sum$bic)
+which.min(res_sum$cp)
+```
+
+# Avec ARIMAX
+
+## Passage en série temporelle
+
+```{r}
+y <- ts(
+  base_finale_complete$Nb_touristes,
+  start = c(2014, 1),
+  frequency = 12
+)
+```
+
+## Stockage des variables explicatives
+
+```{r}
+X_continent <- model.matrix(~ Continent - 1, data = base_finale_complete)
+```
+
+```{r}
+X_mois <- model.matrix(~ Mois - 1, data = base_finale_complete)
+```
+
+```{r}
+evenement_meteo_num <- as.numeric(as.character(base_finale_complete$evenement_meteo))
+covid_num <- as.numeric(as.character(base_finale_complete$covid))
+```
+
+```{r}
+xreg <- cbind(
+  temperature_anomalie = base_finale_complete$temperature_anomalie,
+  precipitation = base_finale_complete$precipitation,
+  covid = covid_num,
+  evenement_meteo = evenement_meteo_num
+  #X_continent
+)
+```
+
+## Estimation
+
+```{r}
+modele_arimax <- auto.arima(
+  y,
+  xreg = xreg,
+  seasonal = TRUE
+)
+
+summary(modele_arimax)
+
+```
+
+# GETS via arx
+
+```{r}
+mxreg <- cbind(
+  temperature_anomalie = base_finale_complete$temperature_anomalie,
+  precipitation = base_finale_complete$precipitation,
+  covid_num,
+  evenement_meteo_num
+)
+
+```
+
+```{r}
+library(gets)
+
+Model01 <- arx(
+  y,
+  mc = TRUE,          # constante
+  ar = 1:3,           # AR(1), AR(2), AR(3)
+  mxreg = mxreg,
+  vcov.type = "ordinary"
+)
+```
