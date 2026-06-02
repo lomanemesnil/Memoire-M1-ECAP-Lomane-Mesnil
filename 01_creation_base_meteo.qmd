@@ -1,0 +1,66 @@
+---
+title: "Météo"
+format: html
+editor: visual
+---
+
+# Import de la base
+
+```{r}
+library(readxl)
+meteo <- read_excel("E:/M1/Mémoire/Données/Météo/public_emdat_custom_request_2026-01-08_1dd9bdf8-21f3-4915-a194-35ad1ade0a8b.xlsx")
+View(meteo)
+```
+
+```{r}
+str(meteo)
+```
+
+# Garder unuiquement lorsque Country = Mauritius
+
+```{r}
+meteo_maurice <- meteo[meteo$Country == "Mauritius", ]
+View(meteo_maurice)
+```
+
+```{r}
+library(dplyr)
+library(lubridate)
+
+# 1. On crée 'meteo_propre' à partir de ton import EM-DAT
+meteo_propre <- meteo_maurice %>%
+  select(`Start Year`, `Start Month`, `Disaster Type`, `Event Name`) %>%
+  rename(Annee = `Start Year`, 
+         Mois_num = `Start Month`, 
+         Type = `Disaster Type`, 
+         Nom = `Event Name`) %>%
+  mutate(Date = make_date(year = Annee, month = Mois_num, day = 1))
+
+
+
+meteo_propre <- meteo_propre %>%
+  mutate(Date = make_date(year = Annee, month = Mois_num, day = 1))
+```
+
+```{r}
+# 2. On crée manuellement la période COVID pour Maurice
+# Fermeture totale mars 2020, réouverture progressive fin 2021
+covid_dates <- data.frame(
+  Date = seq(as.Date("2020-03-01"), as.Date("2021-10-01"), by = "month"),
+  Type = "Pandémie",
+  Nom = "COVID-19"
+)
+
+# 3. On combine les deux (le fameux bind_rows qui bloquait)
+tous_les_chocs <- bind_rows(meteo_propre, covid_dates) %>%
+  arrange(Date)
+
+tous_les_chocs <- tous_les_chocs[, c("Type", "Nom", "Date")]
+```
+
+```{r}
+# sauvegarde du df "tous les chocs"
+library(readr)
+write_csv(tous_les_chocs, "E:/M1/Mémoire/Données/tous_les_chocs.csv")
+```
+

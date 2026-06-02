@@ -1,0 +1,105 @@
+---
+title: "création bases propres"
+format: html
+editor: visual
+---
+
+# Packages
+
+```{r}
+library(readr)
+library(dplyr)
+library(lubridate)
+```
+
+# Import des bases
+
+```{r}
+touristes_par_continents <- read_csv("E:/M1/Mémoire/Données/touristes_par_continents.csv")
+View(touristes_par_continents)
+```
+
+```{r}
+str(touristes_par_continents)
+summary(touristes_par_continents)
+```
+
+```{r}
+tous_les_chocs <- read_csv("E:/M1/Mémoire/Données/tous_les_chocs.csv")
+View(tous_les_chocs)
+```
+
+```{r}
+str(tous_les_chocs)
+summary(tous_les_chocs)
+```
+
+# Création de df_simple
+
+```{r}
+df_simple <- touristes_par_continents %>%
+  group_by(Annee, Mois_num, Date) %>%
+  summarise(
+    Nb_touristes = sum(Nb_touristes, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+# Ajout de tous_les_chocs
+
+## Calcul : 1 ou 0
+
+```{r}
+chocs_mensuels <- tous_les_chocs %>%
+  mutate(
+    Annee = year(Date),
+    Mois_num = month(Date),
+    evenement_meteo = ifelse(Type %in% c("Storm", "Flood", "Road"), 1, 0),
+    covid = ifelse(Type == "Pandémie", 1, 0)
+  ) %>%
+  group_by(Annee, Mois_num) %>%
+  summarise(
+    evenement_meteo = max(evenement_meteo, na.rm = TRUE),
+    covid = max(covid, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+## Jointure avec df_simple
+
+```{r}
+df_simple <- df_simple %>%
+  left_join(
+    chocs_mensuels,
+    by = c("Annee", "Mois_num")
+  ) %>%
+  mutate(
+    evenement_meteo = ifelse(is.na(evenement_meteo), 0, evenement_meteo),
+    covid = ifelse(is.na(covid), 0, covid)
+  )
+```
+
+## Jointure avec touristes_par_continents
+
+```{r}
+touristes_par_continents <- touristes_par_continents %>%
+  left_join(
+    chocs_mensuels,
+    by = c("Annee", "Mois_num")
+  ) %>%
+  mutate(
+    evenement_meteo = ifelse(is.na(evenement_meteo), 0, evenement_meteo),
+    covid = ifelse(is.na(covid), 0, covid)
+  )
+```
+
+# Sauvegarde
+
+```{r}
+write.csv(touristes_par_continents, "E:/M1/Mémoire/modele_continents.csv")
+```
+
+```{r}
+write.csv(df_simple, "E:/M1/Mémoire/modele_simple.csv")
+```

@@ -1,0 +1,67 @@
+---
+title: "Evolution dans le temps des événements météorologiques"
+format: html
+editor: visual
+---
+
+# Import de la base
+
+```{r}
+library(readxl)
+meteo_total <- read_excel("E:/M1/Mémoire/Données/Météo/public_emdat_custom_request_2026-01-08_1dd9bdf8-21f3-4915-a194-35ad1ade0a8b.xlsx")
+View(meteo_total)
+```
+
+```{r}
+meteo_maurice <- meteo_total[meteo_total$Country == "Mauritius", ]
+```
+
+# Base simple pour Maurice
+
+```{r}
+library(dplyr)
+library(lubridate)
+
+meteo_maurice <- meteo_maurice %>%
+  select(`Start Year`, `Start Month`, `Disaster Type`, `Event Name`) %>%
+  rename(Annee = `Start Year`, 
+         Mois_num = `Start Month`, 
+         Type = `Disaster Type`, 
+         Nom = `Event Name`) %>%
+  mutate(Date = make_date(year = Annee, month = Mois_num, day = 1))
+
+
+
+meteo_maurice <- meteo_maurice %>%
+  mutate(Date = make_date(year = Annee, month = Mois_num, day = 1))
+```
+
+
+# Graphique Maurice
+
+```{r}
+library(ggplot2)
+library(tidyr)
+
+meteo_maurice <- meteo_maurice %>%
+  filter(Type %in% c("Storm", "Flood", "Extreme temperature"))
+
+evol_ligne <- meteo_maurice %>%
+  group_by(Annee) %>%
+  summarise(nb_events = n()) |>
+  complete(Annee = 2002:2024, fill = list(nb_events = 0))
+
+ggplot(evol_ligne, aes(x = Annee, y = nb_events)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_point(color = "darkblue", size = 2) + 
+  scale_x_continuous(breaks = seq(min(evol_ligne$Annee), max(evol_ligne$Annee), by = 2)) +
+  scale_y_continuous(limits = c(0, max(evol_ligne$nb_events) + 1)) +
+  labs(
+    title = "Évolution de la fréquence des événements météorologiques à l'île Maurice",
+    #subtitle = "Focus sur les tempêtes et inondations (Source : EM-DAT)",
+    x = "Année",
+    y = "Nombre d'événements par an"
+  ) +
+  theme_minimal()
+```
+
