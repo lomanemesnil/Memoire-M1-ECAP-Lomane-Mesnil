@@ -1,0 +1,586 @@
+---
+title: "Estimations"
+format: html
+editor: visual
+---
+
+# Packages
+
+```{r}
+library(readr)
+library(dplyr)
+library(lmtest)
+library(sandwich)
+library(car)
+library(ggplot2)
+library(corrplot)
+library(forecast)
+library(tseries)
+```
+
+# Import des bases
+
+```{r}
+modele_simple <- read_csv("E:/M1/Mémoire/Données/modele_simple_complet.csv")
+View(modele_simple)
+```
+
+```{r}
+modele_continents <- read_csv("E:/M1/Mémoire/Données/modele_continents_complet.csv")
+View(modele_continents)
+```
+
+```{r}
+str(modele_simple)
+summary(modele_simple)
+str(modele_continents)
+summary(modele_continents)
+```
+
+# Stats descriptives
+
+## Analyse univarivée
+
+### Graphique : Evolution de la série avec chocs
+
+```{r}
+events <- modele_simple %>% filter(evenement_meteo == 1)
+
+ggplot(modele_simple, aes(x = Date, y = Nb_touristes)) +
+  # Zone COVID
+  annotate("rect",
+           xmin = as.Date("2020-03-01"),
+           xmax = as.Date("2021-10-01"),
+           ymin = -Inf, ymax = Inf,
+           fill = "red", alpha = 0.1) +
+  annotate("text",
+           x = as.Date("2020-12-01"),
+           y = 140000,
+           label = "Crise COVID-19",
+           color = "red", size = 3.5, fontface = "italic") +
+  # Série principale
+  geom_line(color = "#1a5276", linewidth = 0.7) +
+  # Lignes verticales événements météo
+  geom_vline(data = events,
+             aes(xintercept = Date),
+             color = "#e74c3c", linetype = "dashed", linewidth = 0.7) +
+  # Points événements météo
+  geom_point(data = events,
+             aes(x = Date, y = Nb_touristes),
+             color = "#e74c3c", size = 2.5) +
+  labs(
+    title = "Évolution des arrivées touristiques à l'île Maurice",
+    subtitle = "Chocs météorologiques et crise sanitaire",
+    x = "Années",
+    y = "Nombre d'arrivées"
+  ) +
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 13),
+    plot.subtitle = element_text(size = 10 
+                                 #color = "gray40")
+    )
+  )
+```
+
+### Graphique : Saisonnalité, moyenne par mois
+
+```{r}
+modele_simple %>%
+  group_by(Mois_num) %>%
+  summarise(moyenne = mean(Nb_touristes, na.rm = TRUE)) %>%
+  mutate(Mois = factor(Mois_num, labels = c("Jan","Fév","Mar","Avr","Mai",
+                                             "Jun","Jul","Aoû","Sep","Oct",
+                                             "Nov","Déc"))) %>%
+  ggplot(aes(x = Mois, y = moyenne, group = 1)) +
+  geom_line(color = "#1a5276", linewidth = 0.8) +
+  geom_point(color = "#1a5276", size = 2.5) +
+  labs(
+    title = "Saisonnalité moyenne des arrivées touristiques",
+    subtitle = "Moyenne mensuelle sur la période 2013-2024",
+    x = "Mois", y = "Nombre moyen d'arrivées"
+  ) +
+  theme_minimal()
+```
+
+### Graphique saisonnier année par année
+
+```{r}
+ts_tourisme <- ts(modele_simple$Nb_touristes,
+                  start = c(2013, 1),
+                  frequency = 12)
+
+ggseasonplot(ts_tourisme,
+             year.labels = TRUE,
+             year.labels.left = TRUE,
+             main = "Évolution mensuelle des arrivées touristiques par année",
+             ylab = "Nombre d'arrivées",
+             xlab = "Mois")
+```
+
+### Stats desc sur Nb_touristes
+
+```{r}
+stats_desc <- modele_simple %>%
+  summarise(
+    Minimum = min(Nb_touristes, na.rm = TRUE),
+    Maximum = max(Nb_touristes, na.rm = TRUE),
+    Moyenne = round(mean(Nb_touristes, na.rm = TRUE), 0),
+    Médiane = round(median(Nb_touristes, na.rm = TRUE), 0),
+    `Écart-type` = round(sd(Nb_touristes, na.rm = TRUE), 0)
+  )
+
+print(stats_desc)
+```
+
+### Stats desc selon événement météo (hors période covid)
+
+```{r}
+stats_meteo <- modele_simple %>%
+  filter(covid == 0) %>%
+  group_by(evenement_meteo) %>%
+  summarise(
+    `Nombre de mois` = n(),
+    Moyenne = round(mean(Nb_touristes, na.rm = TRUE), 0),
+    `Écart-type` = round(sd(Nb_touristes, na.rm = TRUE), 0)
+  ) %>%
+  mutate(evenement_meteo = ifelse(evenement_meteo == 1,
+                                  "Avec événement météo",
+                                  "Sans événement météo"))
+
+print(stats_meteo)
+```
+
+### Graphique : Boxplots par mois
+
+```{r}
+modele_simple %>%
+  mutate(Mois = factor(Mois_num, labels = c("Jan","Fév","Mar","Avr","Mai",
+                                             "Jun","Jul","Aoû","Sep","Oct",
+                                             "Nov","Déc"))) %>%
+  ggplot(aes(x = Mois, y = Nb_touristes)) +
+  geom_boxplot(fill = "#aed6f1", color = "#1a5276") +
+  labs(
+    title = "Distribution des arrivées touristiques par mois",
+    x = "Mois", y = "Nombre d'arrivées"
+  ) +
+  theme_minimal()
+```
+
+### Graphique : Boxplots avant - après covid
+
+```{r}
+modele_simple <- modele_simple %>%
+  mutate(periode = case_when(
+    Date < as.Date("2020-03-01") ~ "Avant Covid",
+    Date >= as.Date("2021-10-01") ~ "Après Covid",
+    TRUE ~ "Pendant COVID"
+  ))
+
+modele_simple %>%
+  filter(periode != "Pendant COVID") %>%
+  mutate(periode = factor(periode, levels = c("Avant Covid", "Après Covid"))) %>%
+  ggplot(aes(x = periode, y = Nb_touristes)) +
+  geom_boxplot(fill = "#6A5ACD", color = "#4a4a8a", alpha = 0.85,
+               width = 0.5) +
+  scale_y_continuous(
+    limits = c(50000, 160000),
+    breaks = c(60000, 90000, 120000, 150000),
+    labels = scales::comma
+  ) +
+  labs(
+    title = "Arrivées touristiques avant et après la crise Covid-19",
+    x = "Période",
+    y = "Nombre d'arrivées"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12),
+    axis.title = element_text(size = 10)
+  )
+```
+
+### Stats desc sur anomalie_temperature et anomalie_precipitation
+
+```{r}
+# anomalie_temperature
+stats_desc_anomalie_temp <- modele_simple %>%
+  summarise(
+    Minimum = min(anomalie_temperature, na.rm = TRUE),
+    Maximum = max(anomalie_temperature, na.rm = TRUE),
+    Moyenne = round(mean(anomalie_temperature, na.rm = TRUE), 0),
+    Médiane = round(median(anomalie_temperature, na.rm = TRUE), 0),
+    `Écart-type` = round(sd(anomalie_temperature, na.rm = TRUE), 0)
+  )
+
+print(stats_desc_anomalie_temp)
+```
+
+```{r}
+# anomalie_precipitation
+stats_desc_anomalie_precip <- modele_simple %>%
+  summarise(
+    Minimum = min(anomalie_precipitation, na.rm = TRUE),
+    Maximum = max(anomalie_precipitation, na.rm = TRUE),
+    Moyenne = round(mean(anomalie_precipitation, na.rm = TRUE), 0),
+    Médiane = round(median(anomalie_precipitation, na.rm = TRUE), 0),
+    `Écart-type` = round(sd(anomalie_precipitation, na.rm = TRUE), 0)
+  )
+
+print(stats_desc_anomalie_precip)
+```
+
+## Analyse bivariée
+
+### Quanti - quanti
+
+```{r}
+modele_hors_covid <- modele_simple %>% filter(covid == 0)
+
+cor_spearman <- cor(
+  modele_hors_covid %>%
+    select(Nb_touristes, anomalie_temperature, anomalie_precipitation),
+  method = "spearman",
+  use = "complete.obs"
+)
+
+print(round(cor_spearman, 3))
+
+corrplot(cor_spearman,
+         method = "color",
+         type = "upper",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45,
+         title = "Matrice de corrélation de Spearman (hors COVID)",
+         mar = c(0, 0, 2, 0))
+```
+
+Corrélation de Spearman car données non normale + présence de valeur extrêmes à cause du COVID
+
+## Quanti - quali
+
+### Graphique : Boxplots comparatifs des moyennes des arrivées selon evenement météo (hors période covid)
+
+```{r}
+modele_simple %>%
+  filter(covid == 0) %>%
+  mutate(evenement_meteo = ifelse(evenement_meteo == 1,
+                                  "Avec événement météo",
+                                  "Sans événement météo")) %>%
+  ggplot(aes(x = evenement_meteo, y = Nb_touristes, fill = evenement_meteo)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Avec événement météo" = "#f1948a",
+                                "Sans événement météo" = "#aed6f1")) +
+  labs(
+    title = "Arrivées touristiques selon la présence d'un événement météorologique",
+    subtitle = "Hors période COVID-19",
+    x = "", y = "Nombre d'arrivées"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+# Stationnarité
+
+```{r}
+adf.test(modele_simple$Nb_touristes)
+```
+
+Stationnarité pas ok. Mais inutile pour les séries saisonnière donc ok.
+
+# Modèles
+
+## Modèle général
+
+### Sans événements météo (modèle de ref)
+
+```{r}
+modele_ref <- lm(Nb_touristes ~ covid + janvier + fevrier + mars + avril +
+                   juin + juillet + aout + septembre + octobre + novembre +
+                   decembre + anomalie_temperature + anomalie_precipitation,
+                 data = modele_simple)
+summary(modele_ref)
+```
+
+### Avec énénements météo
+
+```{r}
+modele_complet <- lm(Nb_touristes ~ evenement_meteo + covid + janvier + fevrier +
+                       mars + avril + juin + juillet + aout + septembre + octobre +
+                       novembre + decembre + anomalie_temperature + anomalie_precipitation,
+                     data = modele_simple)
+summary(modele_complet)
+```
+
+### Comparaison
+
+```{r}
+AIC(modele_ref, modele_complet)
+```
+
+### Tests de validation (modele_complet)
+
+```{r}
+# Forme fonctionnelle 
+resettest(modele_ref)
+resettest(modele_complet)
+```
+
+```{r}
+# VIF
+vif(modele_complet)
+```
+
+```{r}
+# hétéroscédasticité
+bptest(modele_complet)
+```
+
+```{r}
+# autocorrélation des résidus
+bgtest(modele_complet, order = 1)
+```
+
+```{r}
+coeftest(modele_complet, vcov = NeweyWest(modele_complet))
+coeftest(modele_ref, vcov = NeweyWest(modele_ref))
+```
+
+## Modèles par continents
+
+```{r}
+continents <- unique(modele_continents$Pays)
+resultats_continents <- list()
+
+for (continent in continents) {
+  
+  cat("\n\n", strrep("=", 50), "\n")
+  cat("CONTINENT :", continent, "\n")
+  cat(strrep("=", 50), "\n")
+  
+  sous_groupe <- modele_continents %>% filter(Pays == continent)
+  
+  # --- Modèle de référence (sans evenement_meteo) ---
+  mod_ref <- lm(Nb_touristes ~ covid + janvier + fevrier + mars + avril +
+                  juin + juillet + aout + septembre + octobre + novembre +
+                  decembre + anomalie_temperature + anomalie_precipitation,
+                data = sous_groupe)
+  
+  # --- Modèle complet (avec evenement_meteo) ---
+  mod_complet <- lm(Nb_touristes ~ evenement_meteo + covid + janvier + fevrier +
+                      mars + avril + juin + juillet + aout + septembre + octobre +
+                      novembre + decembre + anomalie_temperature + anomalie_precipitation,
+                    data = sous_groupe)
+  
+  cat("\n--- Résultats modèle de référence (MCO classique) ---\n")
+  print(summary(mod_ref))
+  
+  cat("\n--- Résultats modèle complet (MCO classique) ---\n")
+  print(summary(mod_complet))
+  
+  cat("\n--- Comparaison AIC : ref vs complet ---\n")
+  print(AIC(mod_ref, mod_complet))
+  
+  # Tests de validation pour le modèle de référence 
+  cat("\n--- Test de forme fonctionnelle (Ramsey RESET) ---\n")
+  print(resettest(mod_ref))
+  
+  cat("\n--- Absence de multicolinéarité (VIF) ---\n")
+  print(vif(mod_ref))
+  
+  cat("\n--- Homoscédasticité (Breusch-Pagan) ---\n")
+  print(bptest(mod_ref))
+  
+  cat("\n--- Absence d'autocorrélation (Breusch-Godfrey) ---\n")
+  print(bgtest(mod_ref, order = 1))
+  
+  cat("\n--- Coefficients avec correction Newey-West ---\n")
+  print(coeftest(mod_ref, vcov = NeweyWest(mod_ref)))
+  
+  # Tests de validation pour le modèle complet 
+  cat("\n--- Test de forme fonctionnelle (Ramsey RESET) ---\n")
+  print(resettest(mod_complet))
+  
+  cat("\n--- Absence de multicolinéarité (VIF) ---\n")
+  print(vif(mod_complet))
+  
+  cat("\n--- Homoscédasticité (Breusch-Pagan) ---\n")
+  print(bptest(mod_complet))
+  
+  cat("\n--- Absence d'autocorrélation (Breusch-Godfrey) ---\n")
+  print(bgtest(mod_complet, order = 1))
+  
+  # Coefficients des modèles
+
+  cat("\n--- Newey-West modèle de RÉFÉRENCE (sans evenement_meteo) ---\n")
+  print(coeftest(mod_ref, vcov = NeweyWest(mod_ref)))
+  
+  cat("\n--- Newey-West modèle GENERAL (avec evenement_meteo) ---\n")
+  print(coeftest(mod_complet, vcov = NeweyWest(mod_complet)))
+  
+  resultats_continents[[continent]] <- list(
+    mod_ref    = mod_ref,
+    mod_complet = mod_complet
+  )
+}
+```
+
+## Passage au log pour certains continents
+
+```{r}
+continents_reset_pb <- c("EUROPE", "AFRICA", "ASIA", "OCEANIA")
+resultats_continents_log <- list()
+
+for (continent in continents_reset_pb) {
+  
+  cat("\n\n", strrep("=", 50), "\n")
+  cat("MODÈLE LOG —", continent, "\n")
+  cat(strrep("=", 50), "\n")
+  
+  sous_groupe <- modele_continents %>%
+    filter(Pays == continent, Nb_touristes > 0)
+  
+  mod_ref_log <- lm(log(Nb_touristes) ~ covid + janvier + fevrier + mars + avril +
+                      juin + juillet + aout + septembre + octobre + novembre +
+                      decembre + anomalie_temperature + anomalie_precipitation,
+                    data = sous_groupe)
+  
+  mod_complet_log <- lm(log(Nb_touristes) ~ evenement_meteo + covid + janvier +
+                          fevrier + mars + avril + juin + juillet + aout +
+                          septembre + octobre + novembre + decembre +
+                          anomalie_temperature + anomalie_precipitation,
+                        data = sous_groupe)
+  
+  # --- Résultats MCO bruts ---
+  cat("\n--- Summary modèle de RÉFÉRENCE (sans evenement_meteo) ---\n")
+  print(summary(mod_ref_log))
+  
+  cat("\n--- Summary modèle COMPLET (avec evenement_meteo) ---\n")
+  print(summary(mod_complet_log))
+  
+  cat("\n--- Comparaison AIC : ref log vs complet log ---\n")
+  print(AIC(mod_ref_log, mod_complet_log))
+  
+  # --- Tests de validation ---
+  cat("\n--- RESET test (forme fonctionnelle) ---\n")
+  reset_result <- resettest(mod_complet_log)
+  print(reset_result)
+  if (reset_result$p.value > 0.05) {
+    cat("Forme fonctionnelle validée en log pour", continent, "\n")
+  } else {
+    cat("Forme fonctionnelle toujours rejetée en log pour", continent,
+        "\n     Modèle linéaire conservé avec mention de la limite\n")
+  }
+  
+  # Modèles complets
+  
+  cat("\n--- VIF (multicolinéarité) ---\n")
+  print(vif(mod_complet_log))
+  
+  cat("\n--- Breusch-Pagan (hétéroscédasticité) ---\n")
+  print(bptest(mod_complet_log))
+  
+  cat("\n--- Breusch-Godfrey (autocorrélation) ---\n")
+  print(bgtest(mod_complet_log, order = 1))
+  
+  cat("\n--- Newey-West modèle COMPLET ---\n")
+  print(coeftest(mod_complet_log, vcov = NeweyWest(mod_complet_log)))
+  
+  # Modèles de ref
+  
+  cat("\n--- VIF (multicolinéarité) ---\n")
+  print(vif(mod_ref_log))
+  
+  cat("\n--- Breusch-Pagan (hétéroscédasticité) ---\n")
+  print(bptest(mod_ref_log))
+  
+  cat("\n--- Breusch-Godfrey (autocorrélation) ---\n")
+  print(bgtest(mod_ref_log, order = 1))
+  
+  cat("\n--- Newey-West modèle de ref ---\n")
+  print(coeftest(mod_ref_log, vcov = NeweyWest(mod_complet_log)))
+  
+  resultats_continents_log[[continent]] <- list(
+    mod_ref     = mod_ref_log,
+    mod_complet = mod_complet_log
+  )
+}
+
+
+```
+
+## Tableau comparatif des modèles
+
+```{r}
+tableau_comparaison <- data.frame(
+  Modele = c("Général sans météo", "Général avec météo",
+             sapply(continents, function(c) paste(c, "sans météo")),
+             sapply(continents, function(c) paste(c, "avec météo"))),
+  R2_ajuste = c(
+    summary(modele_ref)$adj.r.squared,
+    summary(modele_complet)$adj.r.squared,
+    sapply(continents, function(c)
+      summary(resultats_continents[[c]]$mod_ref)$adj.r.squared),
+    sapply(continents, function(c)
+      summary(resultats_continents[[c]]$mod_complet)$adj.r.squared)
+  ),
+    AIC = c(
+    AIC(modele_ref),
+    AIC(modele_complet),
+    sapply(continents, function(c) AIC(resultats_continents[[c]]$mod_ref)),
+    sapply(continents, function(c) AIC(resultats_continents[[c]]$mod_complet))
+  )
+)
+
+print(tableau_comparaison %>%
+  mutate(across(where(is.numeric), ~ round(.x, 3))))
+```
+
+## Tableau comparatif des modèles continents
+
+```{r}
+
+tableau_final <- data.frame(
+  Modèle = c(
+    "Général",
+    "Europe", "Afrique", "Asie", "Océanie", "Amérique"
+  ),
+  `R2 ajusté sans météo` = c(
+    round(summary(modele_ref)$adj.r.squared, 3),
+    round(summary(resultats_continents[["EUROPE"]]$mod_ref)$adj.r.squared, 3),
+    round(summary(resultats_continents[["AFRICA"]]$mod_ref)$adj.r.squared, 3),
+    round(summary(resultats_continents[["ASIA"]]$mod_ref)$adj.r.squared, 3),
+    round(summary(resultats_continents_log[["OCEANIA"]]$mod_ref)$adj.r.squared, 3),
+    round(summary(resultats_continents[["AMERICA"]]$mod_ref)$adj.r.squared, 3)
+  ),
+  `R2 ajusté avec météo` = c(
+    round(summary(modele_complet)$adj.r.squared, 3),
+    round(summary(resultats_continents[["EUROPE"]]$mod_complet)$adj.r.squared, 3),
+    round(summary(resultats_continents[["AFRICA"]]$mod_complet)$adj.r.squared, 3),
+    round(summary(resultats_continents[["ASIA"]]$mod_complet)$adj.r.squared, 3),
+    round(summary(resultats_continents_log[["OCEANIA"]]$mod_complet)$adj.r.squared, 3),
+    round(summary(resultats_continents[["AMERICA"]]$mod_complet)$adj.r.squared, 3)
+  ),
+  `AIC sans météo` = c(
+    round(AIC(modele_ref), 1),
+    round(AIC(resultats_continents[["EUROPE"]]$mod_ref), 1),
+    round(AIC(resultats_continents[["AFRICA"]]$mod_ref), 1),
+    round(AIC(resultats_continents[["ASIA"]]$mod_ref), 1),
+    round(AIC(resultats_continents_log[["OCEANIA"]]$mod_ref), 1),
+    round(AIC(resultats_continents[["AMERICA"]]$mod_ref), 1)
+  ),
+  `AIC avec météo` = c(
+    round(AIC(modele_complet), 1),
+    round(AIC(resultats_continents[["EUROPE"]]$mod_complet), 1),
+    round(AIC(resultats_continents[["AFRICA"]]$mod_complet), 1),
+    round(AIC(resultats_continents[["ASIA"]]$mod_complet), 1),
+    round(AIC(resultats_continents_log[["OCEANIA"]]$mod_complet), 1),
+    round(AIC(resultats_continents[["AMERICA"]]$mod_complet), 1)
+  ),
+  check.names = FALSE
+)
+
+print(tableau_final)
+```

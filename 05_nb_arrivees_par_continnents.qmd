@@ -1,0 +1,89 @@
+---
+title: "stats descriptives en fonctions des continents"
+format: html
+editor: visual
+---
+
+```{r}
+library(readxl)
+base_tourisme <- read_excel("E:/M1/Mémoire/Données/base_tourisme.xlsx")
+View(base_tourisme)
+str(base_tourisme)
+```
+
+```{r}
+library(dplyr)
+library(lubridate)
+df_continents <- base_tourisme |>
+  filter(Pays %in% c("EUROPE", "AFRICA", "ASIA", "AMERICA", "OCEANIA"))
+
+df_continents <- df_continents %>%
+  mutate(Date = make_date(year = Annee, month = Mois_num, day = 1))
+```
+
+```{r}
+# sauvegarde de "df_continents"
+library(readr)
+write.csv(df_continents, "E:/M1/Mémoire/Données/touristes_par_continents.csv")
+```
+
+```{r}
+library(ggplot2)
+
+# on groupe par année et continent
+df_pie <- df_continents %>%
+  group_by(Annee, Pays) %>%
+  summarise(Total_Annee = sum(Nb_touristes, na.rm = TRUE)) %>%
+  group_by(Annee) %>%
+  mutate(Part = Total_Annee / sum(Total_Annee) * 100) # Calcul du %
+
+# création du graphique
+ggplot(df_pie, aes(x = "", y = Total_Annee, fill = Pays)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) + # C'est ce qui transforme les barres en cercles
+  facet_wrap(~Annee) +          # Crée un camembert par année
+  theme_void() +                # Enlève les axes inutiles
+  labs(title = "Provenance des touristes à l'Île Maurice par continent",
+       fill = "Continent") +
+  geom_text(aes(label = paste0(round(Part), "%")), 
+            position = position_stack(vjust = 0.5), 
+            size = 3) +
+  scale_fill_brewer(palette = "Set3") # Jolies couleurs
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+
+ggplot(df_pie, aes(x = as.factor(Annee), y = Part, fill = Pays)) +
+  geom_bar(stat = "identity", color = "white") +
+  theme_minimal() +
+  labs(title = "Évolution de la provenance des touristes (2014-2024)",
+       x = "Année",
+       y = "Pourcentage (%)",
+       fill = "Continent") +
+  scale_fill_brewer(palette = "Paired") # Couleurs distinctes
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(scales) 
+
+df_brut <- df_continents %>%
+  group_by(Annee, Pays) %>%
+  summarise(Total_Annee = sum(Nb_touristes, na.rm = TRUE))
+
+# création du graphique
+ggplot(df_brut, aes(x = as.factor(Annee), y = Total_Annee, fill = Pays)) +
+  geom_bar(stat = "identity", color = "white") +
+  scale_y_continuous(labels = label_number(big.mark = " ")) + # Pour lire 1 200 000 proprement
+  theme_minimal() +
+  labs(title = "Volume annuel des arrivées touristiques par continent",
+       x = "Année",
+       y = "Nombre total de touristes",
+       fill = "Continent") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
